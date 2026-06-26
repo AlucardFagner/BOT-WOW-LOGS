@@ -1,558 +1,3 @@
-// require('dotenv').config();
-// const { 
-//     Client, 
-//     GatewayIntentBits, 
-//     EmbedBuilder, 
-//     ActionRowBuilder, 
-//     ButtonBuilder, 
-//     ButtonStyle, 
-//     ModalBuilder, 
-//     TextInputBuilder, 
-//     TextInputStyle, 
-//     StringSelectMenuBuilder 
-// } = require('discord.js');
-// const axios = require('axios');
-
-// const client = new Client({
-//     intents: [
-//         GatewayIntentBits.Guilds,
-//         GatewayIntentBits.GuildMessages,
-//         GatewayIntentBits.MessageContent
-//     ]
-// });
-
-// const PREFIX = process.env.PREFIX || '!';
-// const WCL_API_KEY = process.env.WCL_API_KEY;
-
-// // ==========================================
-// // CONFIGURAÇÃO DAS RAIDES (ZONES) DO WOW
-// // ==========================================
-// // Você pode consultar esses IDs na própria API ou na URL do Warcraft Logs
-// const LISTA_DE_RAIDES = [
-//     { label: "Palácio Nerub'ar (TWW)", value: "38" },
-//     { label: "Libertação de Inframina (TWW)", value: "40" },
-//     { label: "Amirdrassil (DF)", value: "35" },
-//     { label: "VS/DR/MQD", value: "46" },
-//     { label: "Sporefall", value: "50" }
-// ];
-
-// client.once('ready', () => {
-//     console.log(`🧙‍♂️ Painel Avançado de Logs Online!`);
-// });
-
-// function getParseEmoji(percentile) {
-//     if (percentile >= 99) return '🟧 (Lendário)';
-//     if (percentile >= 95) return '🟪 (Épico)';
-//     if (percentile >= 75) return '🟪 (Roxo)';
-//     if (percentile >= 50) return '🟦 (Azul)';
-//     if (percentile >= 25) return '🟩 (Verde)';
-//     return '⬜ (Cinza)';
-// }
-
-// // ==========================================
-// // 1. CRIANDO O PAINEL FIXO (COMANDO !SETUP)
-// // ==========================================
-// client.on('messageCreate', async (message) => {
-//     if (message.author.bot || !message.content.startsWith(PREFIX)) return;
-
-//     const args = message.content.slice(PREFIX.length).trim().split(/ +/);
-//     const command = args.shift().toLowerCase();
-
-//     if (command === 'setup') {
-//         await message.delete().catch(() => {});
-
-//         const embedPainel = new EmbedBuilder()
-//             .setColor('#f5a623')
-//             .setTitle('🏆 WARCRAFT LOGS - FILTRO AVANÇADO 🏆')
-//             .setDescription('Consulte seus parses filtrando por **Raide específica** e **Boss específico**. Clique no botão abaixo para iniciar.')
-//             .setImage('https://assets.rpglogs.com/images/warcraft/wcl-logo.png')
-//             .setFooter({ text: 'Consultas precisas por personagem' });
-
-//         const botaoBuscar = new ButtonBuilder()
-//             .setCustomId('abrir_modal_wcl')
-//             .setLabel('🔍 Filtrar Meu Parse')
-//             .setStyle(ButtonStyle.Primary);
-
-//         const row = new ActionRowBuilder().addComponents(botaoBuscar);
-//         message.channel.send({ embeds: [embedPainel], components: [row] });
-//     }
-// });
-
-// // ==========================================
-// // 2. SISTEMA DE INTERAÇÕES MULTI-ESTÁGIOS
-// // ==========================================
-// client.on('interactionCreate', async (interaction) => {
-    
-//     // PASSO A: Clicou no botão principal -> Abre o formulário
-//     // if (interaction.isButton() && interaction.customId === 'abrir_modal_wcl') {
-//     //     const modal = new ModalBuilder()
-//     //         .setCustomId('modal_dados_wcl')
-//     //         .setTitle('Dados do Personagem');
-
-//     //     const inputNome = new TextInputBuilder()
-//     //         .setCustomId('char_name')
-//     //         .setLabel('Nome do Personagem:')
-//     //         .setStyle(TextInputStyle.Short)
-//     //         .setRequired(true);
-
-//     //     const inputServidor = new TextInputBuilder()
-//     //         .setCustomId('char_server')
-//     //         .setLabel('Servidor (Use hífen se houver espaço):')
-//     //         .setStyle(TextInputStyle.Short)
-//     //         .setRequired(true);
-            
-
-//     //     modal.addComponents(
-//     //         new ActionRowBuilder().addComponents(inputNome),
-//     //         new ActionRowBuilder().addComponents(inputServidor)
-//     //     );
-        
-
-//     //     return await interaction.showModal(modal);
-//     // }
-//     if (interaction.isButton() && interaction.customId === 'abrir_modal_wcl') {
-//         const modal = new ModalBuilder()
-//             .setCustomId('modal_dados_wcl')
-//             .setTitle('Buscar Dados no Warcraft Logs');
-
-//         const inputNome = new TextInputBuilder()
-//             .setCustomId('char_name')
-//             .setLabel('Nome do Personagem:')
-//             .setStyle(TextInputStyle.Short)
-//             .setPlaceholder('Ex: Illidan')
-//             .setRequired(true);
-
-//         const inputServidor = new TextInputBuilder()
-//             .setCustomId('char_server')
-//             .setLabel('Servidor (Use hífen se tiver espaço):')
-//             .setStyle(TextInputStyle.Short)
-//             .setPlaceholder('Ex: Azralon ou Area-52')
-//             .setRequired(true);
-
-//         modal.addComponents(
-//             new ActionRowBuilder().addComponents(inputNome),
-//             new ActionRowBuilder().addComponents(inputServidor)
-//         );
-
-//         return await interaction.showModal(modal);
-//     }
-
-//     // PASSO B: Enviou o modal -> Apresenta o menu de seleção da RAIDE
-//     if (interaction.isModalSubmit() && interaction.customId === 'modal_dados_wcl') {
-//         await interaction.deferReply({ ephemeral: true });
-
-//         const charName = interaction.fields.getTextInputValue('char_name').trim();
-//         const serverName = interaction.fields.getTextInputValue('char_server').trim();
-
-//         // Menu para selecionar a Raide
-//         const selectRaid = new StringSelectMenuBuilder()
-//             .setCustomId(`selecionar_raid_${charName}_${serverName}`)
-//             .setPlaceholder('Escolha a Raide/Expansão que quer analisar...')
-//             .addOptions(LISTA_DE_RAIDES);
-
-//         const embedRaid = new EmbedBuilder()
-//             .setColor('#3b82f6')
-//             .setTitle(`Raides disponíveis para: ${charName}`)
-//             .setDescription('Selecione abaixo qual expansão ou raide você deseja carregar os históricos de logs.');
-
-//         const row = new ActionRowBuilder().addComponents(selectRaid);
-//         await interaction.editReply({ embeds: [embedRaid], components: [row] });
-//     }
-
-//     // PASSO C: Escolheu a Raide -> Puxa os dados daquela "zone" e mostra os BOSSES
-//     if (interaction.isStringSelectMenu() && interaction.customId.startsWith('selecionar_raid_')) {
-//         await interaction.deferUpdate();
-
-//         const [,, charName, serverName] = interaction.customId.split('_');
-//         const zoneId = interaction.values[0]; 
-
-//         try {
-//             // Buscando os dados adicionando o parâmetro &zone= contendo a raide escolhida
-//             const url = `https://www.warcraftlogs.com:443/v1/rankings/character/${encodeURIComponent(charName)}/${encodeURIComponent(serverName)}/US?zone=${zoneId}&api_key=${WCL_API_KEY}`;
-//             const response = await axios.get(url);
-//             const rankings = response.data;
-
-//             if (!rankings || rankings.length === 0) {
-//                 return await interaction.editReply({ 
-//                     embeds: [new EmbedBuilder().setColor('#ef4444').setTitle('❌ Sem registros').setDescription(`Esse personagem não possui nenhuma luta registrada nessa raide específica.`)]
-//                 });
-//             }
-
-//             // Cria o menu de seleção de Bosses filtrados
-//             const selectBoss = new StringSelectMenuBuilder()
-//                 .setCustomId(`selecionar_boss_${charName}_${serverName}_${zoneId}`)
-//                 .setPlaceholder('Escolha o Boss para ver a análise cirúrgica...');
-
-//             const bossesAdicionados = new Set();
-//             rankings.forEach((rank) => {
-//                 if (!bossesAdicionados.has(rank.encounterName) && bossesAdicionados.size < 25) {
-//                     bossesAdicionados.add(rank.encounterName);
-//                     selectBoss.addOptions({
-//                         label: rank.encounterName,
-//                         description: `Ver a melhor performance nesse boss`,
-//                         value: String(rank.encounterID)
-//                     });
-//                 }
-//             });
-
-//             const targetRaidLabel = LISTA_DE_RAIDES.find(r => r.value === zoneId)?.label || "Raide Selecionada";
-
-//             const embedBoss = new EmbedBuilder()
-//                 .setColor('#a855f7')
-//                 .setTitle(`⚔️ Raide: ${targetRaidLabel}`)
-//                 .setDescription(`Selecione um dos chefes abaixo para detalhar o desempenho de **${charName}**.`);
-
-//             const row = new ActionRowBuilder().addComponents(selectBoss);
-//             await interaction.editReply({ embeds: [embedBoss], components: [row] });
-
-//         } catch (error) {
-//             console.error(error);
-//             await interaction.editReply({ content: '❌ Erro ao buscar os chefes dessa raide.' });
-//         }
-//     }
-
-//     // PASSO D: Escolheu o Boss -> Mostra a pancada final com os números reais
-//     if (interaction.isStringSelectMenu() && interaction.customId.startsWith('selecionar_boss_')) {
-//         await interaction.deferUpdate();
-
-//         const [,, charName, serverName, zoneId] = interaction.customId.split('_');
-//         const encounterIDSelected = Number(interaction.values[0]);
-
-//         try {
-//             const url = `https://www.warcraftlogs.com:443/v1/rankings/character/${encodeURIComponent(charName)}/${encodeURIComponent(serverName)}/US?zone=${zoneId}&api_key=${WCL_API_KEY}`;
-//             const response = await axios.get(url);
-//             const rankings = response.data;
-
-//             const bossData = rankings.find(rank => rank.encounterID === encounterIDSelected);
-
-//             if (!bossData) {
-//                 return await interaction.editReply({ content: '❌ Dados do boss não localizados.' });
-//             }
-
-//             const emoji = getParseEmoji(bossData.percentile);
-//             const rawAmount = bossData.amount || bossData.total || 0;
-//             const dpsHpsFormatted = rawAmount > 0 ? Math.floor(rawAmount).toLocaleString('pt-BR') : 'N/A';
-
-//             const embedFinal = new EmbedBuilder()
-//                 .setColor('#22c55e')
-//                 .setTitle(`🎯 Análise Final: ${bossData.encounterName}`)
-//                 .setDescription(`Análise de raide extraída com precisão cirúrgica.`)
-//                 .addFields(
-//                     { name: '👤 Player', value: `${charName}-${serverName}`, inline: true },
-//                     { name: '🛡️ Spec', value: `**${bossData.spec}** (${bossData.class})`, inline: true },
-//                     { name: '📊 Parse Geral', value: `**${Math.floor(bossData.percentile)}%** ${emoji}`, inline: true },
-//                     { name: '⚡ DPS / HPS', value: `**${dpsHpsFormatted}**`, inline: true },
-//                     { name: '🌍 Posição Rank', value: `#${bossData.rank}`, inline: true },
-//                     { name: '👥 Tamanho Raide', value: `${bossData.size} players`, inline: true }
-//                 )
-//                 .setTimestamp()
-//                 .setFooter({ text: 'Filtro por Raide & Boss Ativo' });
-
-//             await interaction.editReply({ embeds: [embedFinal] });
-
-//         } catch (error) {
-//             console.error(error);
-//         }
-//     }
-// });
-
-// client.login(process.env.DISCORD_TOKEN);
-
-// require('dotenv').config();
-// const { 
-//     Client, 
-//     GatewayIntentBits, 
-//     EmbedBuilder, 
-//     ActionRowBuilder, 
-//     ButtonBuilder, 
-//     ButtonStyle, 
-//     ModalBuilder, 
-//     TextInputBuilder, 
-//     TextInputStyle, 
-//     StringSelectMenuBuilder 
-// } = require('discord.js');
-// const axios = require('axios');
-
-// const client = new Client({
-//     intents: [
-//         GatewayIntentBits.Guilds,
-//         GatewayIntentBits.GuildMessages,
-//         GatewayIntentBits.MessageContent
-//     ]
-// });
-
-// const PREFIX = process.env.PREFIX || '!';
-// const WCL_API_KEY = process.env.WCL_API_KEY;
-
-// // ==========================================
-// // CONFIGURAÇÃO DAS RAIDES (ZONES) DO WOW
-// // ==========================================
-// const LISTA_DE_RAIDES = [
-//     // ESSA É A NOVA OPÇÃO MÁGICA:
-//     { label: "📊 RESUMO DA SEASON: Média Geral (Atual)", value: "summary_current" },
-    
-//     { label: "Palácio Nerub'ar (TWW)", value: "38" },
-//     { label: "Libertação de Inframina (TWW)", value: "40" },
-//     { label: "Amirdrassil (DF)", value: "35" }
-// ];
-
-// client.once('ready', () => {
-//     console.log(`🧙‍♂️ Painel de Logs Avançado com Resumo de Season Online!`);
-// });
-
-// function getParseEmoji(percentile) {
-//     if (percentile >= 99) return '🟧 (Lendário)';
-//     if (percentile >= 95) return '🟪 (Épico)';
-//     if (percentile >= 75) return '🟪 (Roxo)';
-//     if (percentile >= 50) return '🟦 (Azul)';
-//     if (percentile >= 25) return '🟩 (Verde)';
-//     return '⬜ (Cinza)';
-// }
-
-// // ==========================================
-// // 1. CRIANDO O PAINEL FIXO (COMANDO !SETUP)
-// // ==========================================
-// client.on('messageCreate', async (message) => {
-//     if (message.author.bot || !message.content.startsWith(PREFIX)) return;
-
-//     const args = message.content.slice(PREFIX.length).trim().split(/ +/);
-//     const command = args.shift().toLowerCase();
-
-//     if (command === 'setup') {
-//         await message.delete().catch(() => {});
-
-//         const embedPainel = new EmbedBuilder()
-//             .setColor('#f5a623')
-//             .setTitle('🏆 WARCRAFT LOGS - SISTEMA DE AUDITORIA 🏆')
-//             .setDescription('Monitore o desempenho da guilda. Escolha entre ver a **Média Geral da Season Atual** ou destrinchar raides passadas boss por boss!')
-//             .setImage('https://assets.rpglogs.com/images/warcraft/wcl-logo.png')
-//             .setFooter({ text: 'Selecione a opção desejada após clicar' });
-
-//         const botaoBuscar = new ButtonBuilder()
-//             .setCustomId('abrir_modal_wcl')
-//             .setLabel('🔍 Iniciar Consulta')
-//             .setStyle(ButtonStyle.Primary);
-
-//         const row = new ActionRowBuilder().addComponents(botaoBuscar);
-//         message.channel.send({ embeds: [embedPainel], components: [row] });
-//     }
-// });
-
-// // ==========================================
-// // 2. SISTEMA DE INTERAÇÕES MULTI-ESTÁGIOS
-// // ==========================================
-// client.on('interactionCreate', async (interaction) => {
-    
-//     // PASSO A: Clicou no botão principal -> Abre o formulário
-//     if (interaction.isButton() && interaction.customId === 'abrir_modal_wcl') {
-//         const modal = new ModalBuilder()
-//             .setCustomId('modal_dados_wcl')
-//             .setTitle('Dados do Personagem');
-
-//         const inputNome = new TextInputBuilder()
-//             .setCustomId('char_name')
-//             .setLabel('Nome do Personagem:')
-//             .setStyle(TextInputStyle.Short)
-//             .setRequired(true);
-
-//         const inputServidor = new TextInputBuilder()
-//             .setCustomId('char_server')
-//             .setLabel('Servidor (Use hífen se houver espaço):')
-//             .setStyle(TextInputStyle.Short)
-//             .setRequired(true);
-
-//         modal.addComponents(
-//             new ActionRowBuilder().addComponents(inputNome),
-//             new ActionRowBuilder().addComponents(inputServidor)
-//         );
-
-//         return await interaction.showModal(modal);
-//     }
-
-//     // PASSO B: Enviou o modal -> Apresenta o menu de seleção da RAIDE / RESUMO
-//     if (interaction.isModalSubmit() && interaction.customId === 'modal_dados_wcl') {
-//         await interaction.deferReply({ ephemeral: true });
-
-//         const charName = interaction.fields.getTextInputValue('char_name').trim();
-//         const serverName = interaction.fields.getTextInputValue('char_server').trim();
-
-//         const selectRaid = new StringSelectMenuBuilder()
-//             .setCustomId(`selecionar_raid_${charName}_${serverName}`)
-//             .setPlaceholder('Escolha se quer o Resumo Geral ou uma Raide específica...')
-//             .addOptions(LISTA_DE_RAIDES);
-
-//         const embedRaid = new EmbedBuilder()
-//             .setColor('#3b82f6')
-//             .setTitle(`Menu de Opções para: ${charName}`)
-//             .setDescription('Selecione a primeira opção para ver o comportamento do player na Season inteira, ou selecione uma raide abaixo para ver lutas específicas.');
-
-//         const row = new ActionRowBuilder().addComponents(selectRaid);
-//         await interaction.editReply({ embeds: [embedRaid], components: [row] });
-//     }
-
-//     // PASSO C: Escolheu a Raide OU o Resumo Geral
-//     if (interaction.isStringSelectMenu() && interaction.customId.startsWith('selecionar_raid_')) {
-//         await interaction.deferUpdate();
-
-//         const [,, charName, serverName] = interaction.customId.split('_');
-//         const zoneId = interaction.values[0]; 
-
-//         // -------------------------------------------------------------
-//         // NOVO SUB-SISTEMA: SE ELE ESCOLHEU O RESUMO DA SEASON ATUAL
-//         // -------------------------------------------------------------
-//         if (zoneId === 'summary_current') {
-//             try {
-//                 // Chamada sem passar o parâmetro zone = Puxa automaticamente a season atual inteira
-//                 const url = `https://www.warcraftlogs.com:443/v1/rankings/character/${encodeURIComponent(charName)}/${encodeURIComponent(serverName)}/US?api_key=${WCL_API_KEY}`;
-//                 const response = await axios.get(url);
-//                 const rankings = response.data;
-
-//                 if (!rankings || rankings.length === 0) {
-//                     return await interaction.editReply({ 
-//                         embeds: [new EmbedBuilder().setColor('#ef4444').setTitle('❌ Sem registros').setDescription(`Esse personagem não possui nenhum log registrado na Season atual.`)]
-//                     });
-//                 }
-
-//                 let totalPercentile = 0;
-//                 let totalDpsHps = 0;
-//                 let count = rankings.length;
-//                 let bossListText = "";
-
-//                 // Varre todos os bosses que ele matou na season para calcular a média real
-//                 rankings.forEach((rank) => {
-//                     totalPercentile += rank.percentile;
-//                     const rawAmount = rank.amount || rank.total || 0;
-//                     totalDpsHps += rawAmount;
-
-//                     // Formata a mini-lista para colocar na descrição do Embed
-//                     const emoji = getParseEmoji(rank.percentile);
-//                     const parsedNumber = rawAmount > 0 ? Math.floor(rawAmount).toLocaleString('pt-BR') : 'N/A';
-//                     // Pega apenas o quadrado colorido do emoji para economizar espaço
-//                     const squareEmoji = emoji.split(' ')[0]; 
-                    
-//                     bossListText += `${squareEmoji} **${rank.encounterName}**: Parse ${Math.floor(rank.percentile)}% | *(DPS/HPS: ${parsedNumber})*\n`;
-//                 });
-
-//                 // Matemática das médias aritméticas
-//                 const avgPercentile = totalPercentile / count;
-//                 const avgDpsHps = totalDpsHps / count;
-//                 const emojiGeral = getParseEmoji(avgPercentile);
-
-//                 const embedSummary = new EmbedBuilder()
-//                     .setColor('#eab308') // Dourado de conquista
-//                     .setTitle(`📊 BALANÇO DE PERFORMANCE: Season Atual`)
-//                     .setDescription(`Dados consolidados de todos os chefes enfrentados por **${charName} - ${serverName}**:\n\n${bossListText}`)
-//                     .addFields(
-//                         { name: '🛡️ Classe / Spec', value: `**${rankings[0].spec}** (${rankings[0].class})`, inline: true },
-//                         { name: '📈 Média de Parse', value: `**${Math.floor(avgPercentile)}%** ${emojiGeral}`, inline: true },
-//                         { name: '⚡ Média DPS / HPS', value: `**${Math.floor(avgDpsHps).toLocaleString('pt-BR')}**`, inline: true },
-//                         { name: '🏰 Progressão Detectada', value: `**${count}** Bosses com registro`, inline: true }
-//                     )
-//                     .setTimestamp()
-//                     .setFooter({ text: 'Análise de Média Geral Calculada com Sucesso' });
-
-//                 // Retorna diretamente a resposta final limpando os componentes (já que não precisa escolher boss)
-//                 return await interaction.editReply({ embeds: [embedSummary], components: [] });
-
-//             } catch (error) {
-//                 console.error(error);
-//                 return await interaction.editReply({ content: '❌ Erro ao processar o balanço da season.' });
-//             }
-//         }
-
-//         // -------------------------------------------------------------
-//         // Lógica antiga (normal): Se escolheu uma Raid específica, lista os bosses
-//         // -------------------------------------------------------------
-//         try {
-//             const url = `https://www.warcraftlogs.com:443/v1/rankings/character/${encodeURIComponent(charName)}/${encodeURIComponent(serverName)}/US?zone=${zoneId}&api_key=${WCL_API_KEY}`;
-//             const response = await axios.get(url);
-//             const rankings = response.data;
-
-//             if (!rankings || rankings.length === 0) {
-//                 return await interaction.editReply({ 
-//                     embeds: [new EmbedBuilder().setColor('#ef4444').setTitle('❌ Sem registros').setDescription(`Esse personagem não possui nenhuma luta registrada nessa raide específica.`)]
-//                 });
-//             }
-
-//             const selectBoss = new StringSelectMenuBuilder()
-//                 .setCustomId(`selecionar_boss_${charName}_${serverName}_${zoneId}`)
-//                 .setPlaceholder('Escolha o Boss para ver a análise cirúrgica...');
-
-//             const bossesAdicionados = new Set();
-//             rankings.forEach((rank) => {
-//                 if (!bossesAdicionados.has(rank.encounterName) && bossesAdicionados.size < 25) {
-//                     bossesAdicionados.add(rank.encounterName);
-//                     selectBoss.addOptions({
-//                         label: rank.encounterName,
-//                         description: `Ver a melhor performance nesse boss`,
-//                         value: String(rank.encounterID)
-//                     });
-//                 }
-//             });
-
-//             const targetRaidLabel = LISTA_DE_RAIDES.find(r => r.value === zoneId)?.label || "Raide Selecionada";
-
-//             const embedBoss = new EmbedBuilder()
-//                 .setColor('#a855f7')
-//                 .setTitle(`⚔️ Raide: ${targetRaidLabel}`)
-//                 .setDescription(`Selecione um dos chefes abaixo para detalhar o desempenho de **${charName}**.`);
-
-//             const row = new ActionRowBuilder().addComponents(selectBoss);
-//             await interaction.editReply({ embeds: [embedBoss], components: [row] });
-
-//         } catch (error) {
-//             console.error(error);
-//             await interaction.editReply({ content: '❌ Erro ao buscar os chefes dessa raide.' });
-//         }
-//     }
-
-//     // PASSO D: Escolheu o Boss específico (Mantido idêntico)
-//     if (interaction.isStringSelectMenu() && interaction.customId.startsWith('selecionar_boss_')) {
-//         await interaction.deferUpdate();
-
-//         const [,, charName, serverName, zoneId] = interaction.customId.split('_');
-//         const encounterIDSelected = Number(interaction.values[0]);
-
-//         try {
-//             const url = `https://www.warcraftlogs.com:443/v1/rankings/character/${encodeURIComponent(charName)}/${encodeURIComponent(serverName)}/US?zone=${zoneId}&api_key=${WCL_API_KEY}`;
-//             const response = await axios.get(url);
-//             const rankings = response.data;
-
-//             const bossData = rankings.find(rank => rank.encounterID === encounterIDSelected);
-
-//             if (!bossData) {
-//                 return await interaction.editReply({ content: '❌ Dados do boss não localizados.' });
-//             }
-
-//             const emoji = getParseEmoji(bossData.percentile);
-//             const rawAmount = bossData.amount || bossData.total || 0;
-//             const dpsHpsFormatted = rawAmount > 0 ? Math.floor(rawAmount).toLocaleString('pt-BR') : 'N/A';
-
-//             const embedFinal = new EmbedBuilder()
-//                 .setColor('#22c55e')
-//                 .setTitle(`🎯 Análise Final: ${bossData.encounterName}`)
-//                 .setDescription(`Análise de raide extraída com precisão cirúrgica.`)
-//                 .addFields(
-//                     { name: '👤 Player', value: `${charName}-${serverName}`, inline: true },
-//                     { name: '🛡️ Spec', value: `**${bossData.spec}** (${bossData.class})`, inline: true },
-//                     { name: '📊 Parse Geral', value: `**${Math.floor(bossData.percentile)}%** ${emoji}`, inline: true },
-//                     { name: '⚡ DPS / HPS', value: `**${dpsHpsFormatted}**`, inline: true },
-//                     { name: '🌍 Posição Rank', value: `#${bossData.rank}`, inline: true },
-//                     { name: '👥 Tamanho Raide', value: `${bossData.size} players`, inline: true }
-//                 )
-//                 .setTimestamp()
-//                 .setFooter({ text: 'Filtro por Raide & Boss Ativo' });
-
-//             await interaction.editReply({ embeds: [embedFinal] });
-
-//         } catch (error) {
-//             console.error(error);
-//         }
-//     }
-// });
-
-// client.login(process.env.DISCORD_TOKEN);
-
 require('dotenv').config();
 const { 
     Client, 
@@ -577,33 +22,71 @@ const client = new Client({
 });
 
 const PREFIX = process.env.PREFIX || '!';
-const WCL_API_KEY = process.env.WCL_API_KEY;
+const CLIENT_ID = process.env.WCL_CLIENT_ID;
+const CLIENT_SECRET = process.env.WCL_CLIENT_SECRET;
 
-// ==========================================
-// CONFIGURAÇÃO DAS RAIDES (ZONES) DO WOW
-// ==========================================
+const MAPA_CLASSES = {
+    1: "Warrior", 2: "Paladin", 3: "Hunter", 4: "Rogue", 5: "Priest", 
+    6: "Death Knight", 7: "Shaman", 8: "Mage", 9: "Warlock", 10: "Monk", 
+    11: "Druid", 12: "Demon Hunter", 13: "Evoker"
+};
+
+// 1. Atualizamos a lista de opções do Menu
 const LISTA_DE_RAIDES = [
-    { label: "📊 RESUMO DA SEASON: Média Geral (Atual)", value: "summary_current" },
-    { label: "Palácio Nerub'ar (TWW)", value: "38" },
-    { label: "Libertação de Inframina (TWW)", value: "40" },
-    { label: "Amirdrassil (DF)", value: "35" }
+    { label: "📊 RESUMO DA SEASON: Comparativo Completo", value: "summary_current" },
+    { label: "Sporefall", value: "50" },
+    { label: "VS / DR / MQD", value: "46" }
 ];
 
+let tokenAutenticacao = null;
+let tokenExpiracao = 0;
+
+async function obterTokenWCL() {
+    if (tokenAutenticacao && Date.now() < tokenExpiracao) {
+        return tokenAutenticacao;
+    }
+    try {
+        const resposta = await axios.post('https://www.warcraftlogs.com/oauth/token', 
+            new URLSearchParams({ grant_type: 'client_credentials' }), 
+            {
+                auth: { username: CLIENT_ID, password: CLIENT_SECRET },
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+            }
+        );
+        tokenAutenticacao = resposta.data.access_token;
+        tokenExpiracao = Date.now() + (resposta.data.expires_in - 60) * 1000;
+        return tokenAutenticacao;
+    } catch (error) {
+        console.error("❌ Erro de autenticação OAuth2 no Warcraft Logs:", error.message);
+        throw error;
+    }
+}
+
+async function requisicaoGraphQL(query, variables) {
+    const token = await obterTokenWCL();
+    const resposta = await axios.post('https://www.warcraftlogs.com/api/v2/client', 
+        { query, variables },
+        { headers: { Authorization: `Bearer ${token}` } }
+    );
+    return resposta.data;
+}
+
 client.once('ready', () => {
-    console.log(`🧙‍♂️ Painel de Logs Avançado com Best Perf. Avg Online!`);
+    console.log(`🧙‍♂️ Bot atualizado com Sucesso (IDs: 50 e 46)!`);
 });
 
 function getParseEmoji(percentile) {
-    if (percentile >= 99) return '🟧 (Lendário)';
-    if (percentile >= 95) return '🟪 (Épico)';
-    if (percentile >= 75) return '🟪 (Roxo)';
-    if (percentile >= 50) return '🟦 (Azul)';
-    if (percentile >= 25) return '🟩 (Verde)';
+    const p = Number(percentile);
+    if (p >= 99) return '🟧 (Lendário)';
+    if (p >= 95) return '🟪 (Épico)';
+    if (p >= 75) return '🟪 (Roxo)';
+    if (p >= 50) return '🟦 (Azul)';
+    if (p >= 25) return '🟩 (Verde)';
     return '⬜ (Cinza)';
 }
 
 // ==========================================
-// 1. CRIANDO O PAINEL FIXO (COMANDO !SETUP)
+// PAINEL FIXO DE CHAMADA (!SETUP)
 // ==========================================
 client.on('messageCreate', async (message) => {
     if (message.author.bot || !message.content.startsWith(PREFIX)) return;
@@ -615,16 +98,16 @@ client.on('messageCreate', async (message) => {
         await message.delete().catch(() => {});
 
         const embedPainel = new EmbedBuilder()
-            .setColor('#f5a623')
-            .setTitle('🏆 WARCRAFT LOGS - SISTEMA DE AUDITORIA 🏆')
-            .setDescription('Monitore o desempenho da guilda. Escolha entre ver o **Best Perf. Avg da Season Atual** ou destrinchar raides passadas boss por boss!')
+            .setColor('#10b981')
+            .setTitle('🏆 WARCRAFT LOGS - SISTEMA GRAPHQL V2 🏆')
+            .setDescription('Auditoria de guilda instantânea. Extraindo a aba histórica **ALL (Spec Parse)** e o **Patch Atual** em tempo real!')
             .setImage('https://assets.rpglogs.com/images/warcraft/wcl-logo.png')
-            .setFooter({ text: 'Selecione a opção desejada após clicar' });
+            .setFooter({ text: 'Modo de Conexão Segura Ativo' });
 
         const botaoBuscar = new ButtonBuilder()
             .setCustomId('abrir_modal_wcl')
-            .setLabel('🔍 Iniciar Consulta')
-            .setStyle(ButtonStyle.Primary);
+            .setLabel('🔍 Iniciar Auditoria V2')
+            .setStyle(ButtonStyle.Success);
 
         const row = new ActionRowBuilder().addComponents(botaoBuscar);
         message.channel.send({ embeds: [embedPainel], components: [row] });
@@ -632,58 +115,16 @@ client.on('messageCreate', async (message) => {
 });
 
 // ==========================================
-// 2. SISTEMA DE INTERAÇÕES MULTI-ESTÁGIOS
+// INTERAÇÕES DO BOT (MODAL E MENUS)
 // ==========================================
 client.on('interactionCreate', async (interaction) => {
     
-    // if (interaction.isButton() && interaction.customId === 'abrir_modal_wcl') {
-    //     const modal = new ModalBuilder()
-    //         .setCustomId('modal_dados_wcl')
-    //         .setTitle('Dados do Personagem');
-
-    //     const inputNome = new TextInputBuilder()
-    //         .setCustomId('char_name')
-    //         .setLabel('Nome do Personagem:')
-    //         .setStyle(TextInputStyle.Short)
-    //         .setRequired(true);
-
-    //     const inputServidor = new TextInputBuilder()
-    //         .setCustomId('char_server')
-    //         .setLabel('Servidor (Use hífen se houver espaço):')
-    //         .setStyle(TextInputStyle.Short)
-    //         .setRequired(true);
-
-    //     modal.addComponents(
-    //         new ActionRowBuilder().addComponents(inputNome),
-    //         new ActionRowBuilder().addComponents(inputServidor)
-    //     );
-
-    //     return await interaction.showModal(modal);
-    // }
     if (interaction.isButton() && interaction.customId === 'abrir_modal_wcl') {
-        const modal = new ModalBuilder()
-            .setCustomId('modal_dados_wcl')
-            .setTitle('Buscar Dados no Warcraft Logs');
+        const modal = new ModalBuilder().setCustomId('modal_dados_wcl').setTitle('Dados do Personagem');
+        const inputNome = new TextInputBuilder().setCustomId('char_name').setLabel('Nome do Personagem:').setStyle(TextInputStyle.Short).setRequired(true);
+        const inputServidor = new TextInputBuilder().setCustomId('char_server').setLabel('Servidor (Ex: Gallywix, Azralon):').setStyle(TextInputStyle.Short).setRequired(true);
 
-        const inputNome = new TextInputBuilder()
-            .setCustomId('char_name')
-            .setLabel('Nome do Personagem:')
-            .setStyle(TextInputStyle.Short)
-            .setPlaceholder('Ex: Illidan')
-            .setRequired(true);
-
-        const inputServidor = new TextInputBuilder()
-            .setCustomId('char_server')
-            .setLabel('Servidor (Use hífen se tiver espaço):')
-            .setStyle(TextInputStyle.Short)
-            .setPlaceholder('Ex: Azralon ou Area-52')
-            .setRequired(true);
-
-        modal.addComponents(
-            new ActionRowBuilder().addComponents(inputNome),
-            new ActionRowBuilder().addComponents(inputServidor)
-        );
-
+        modal.addComponents(new ActionRowBuilder().addComponents(inputNome), new ActionRowBuilder().addComponents(inputServidor));
         return await interaction.showModal(modal);
     }
 
@@ -691,17 +132,18 @@ client.on('interactionCreate', async (interaction) => {
         await interaction.deferReply({ ephemeral: true });
 
         const charName = interaction.fields.getTextInputValue('char_name').trim();
-        const serverName = interaction.fields.getTextInputValue('char_server').trim();
+        const serverInput = interaction.fields.getTextInputValue('char_server').trim();
+        const serverSlug = serverInput.toLowerCase().replace(/\s+/g, '-');
 
         const selectRaid = new StringSelectMenuBuilder()
-            .setCustomId(`selecionar_raid_${charName}_${serverName}`)
-            .setPlaceholder('Escolha se quer o Resumo Geral ou uma Raide específica...')
+            .setCustomId(`selecionar_raid_${charName}_${serverSlug}`)
+            .setPlaceholder('Escolha se quer o Resumo Geral ou uma Raide...')
             .addOptions(LISTA_DE_RAIDES);
 
         const embedRaid = new EmbedBuilder()
             .setColor('#3b82f6')
             .setTitle(`Menu de Opções para: ${charName}`)
-            .setDescription('Selecione a primeira opção para ver o comportamento do player na Season inteira, ou selecione uma raide abaixo para ver lutas específicas.');
+            .setDescription('Selecione uma das opções abaixo para executar a consulta de dados.');
 
         const row = new ActionRowBuilder().addComponents(selectRaid);
         await interaction.editReply({ embeds: [embedRaid], components: [row] });
@@ -710,149 +152,198 @@ client.on('interactionCreate', async (interaction) => {
     if (interaction.isStringSelectMenu() && interaction.customId.startsWith('selecionar_raid_')) {
         await interaction.deferUpdate();
 
-        const [,, charName, serverName] = interaction.customId.split('_');
+        const [,, charName, serverSlug] = interaction.customId.split('_');
         const zoneId = interaction.values[0]; 
 
         // -------------------------------------------------------------
-        // SUB-SISTEMA: RESUMO DA SEASON ATUAL (COM BEST PERF. AVG DECIMAL)
+        // RESUMO COMPLETO DA SEASON ATUAL
         // -------------------------------------------------------------
         if (zoneId === 'summary_current') {
             try {
-                const url = `https://www.warcraftlogs.com:443/v1/rankings/character/${encodeURIComponent(charName)}/${encodeURIComponent(serverName)}/US?api_key=${WCL_API_KEY}`;
-                const response = await axios.get(url);
-                const rankings = response.data;
+                // 2. Query atualizada apenas com os IDs 50 e 46
+                const queryRaidSummary = `
+                query ($name: String!, $slug: String!, $region: String!) {
+                  characterData {
+                    character(name: $name, serverSlug: $slug, serverRegion: $region) {
+                      classID
+                      r50_all: zoneRankings(zoneID: 50, difficulty: 4, partition: 0)
+                      r50_cur: zoneRankings(zoneID: 50, difficulty: 4)
+                      r46_all: zoneRankings(zoneID: 46, difficulty: 4, partition: 0)
+                      r46_cur: zoneRankings(zoneID: 46, difficulty: 4)
+                    }
+                  }
+                }`;
 
-                if (!rankings || rankings.length === 0) {
+                const resposta = await requisicaoGraphQL(queryRaidSummary, { name: charName, slug: serverSlug, region: 'US' });
+                
+                if (resposta.errors) {
+                    console.error("Erros do GraphQL:", JSON.stringify(resposta.errors));
+                    return await interaction.editReply({ content: '❌ O servidor do Warcraft Logs recusou a query estruturada.' });
+                }
+
+                const charData = resposta?.data?.characterData?.character;
+
+                if (!charData) {
                     return await interaction.editReply({ 
-                        embeds: [new EmbedBuilder().setColor('#ef4444').setTitle('❌ Sem registros').setDescription(`Esse personagem não possui nenhum log registrado na Season atual.`)]
+                        embeds: [new EmbedBuilder().setColor('#ef4444').setTitle('❌ Player não encontrado').setDescription(`Nenhum dado localizado para o personagem **${charName}** no servidor **${serverSlug}**.`)]
                     });
                 }
 
-                let totalPercentile = 0;
-                let totalDpsHps = 0;
-                let count = rankings.length;
-                let bossListText = "";
-
-                rankings.forEach((rank) => {
-                    totalPercentile += rank.percentile;
-                    const rawAmount = rank.amount || rank.total || 0;
-                    totalDpsHps += rawAmount;
-
-                    const emoji = getParseEmoji(rank.percentile);
-                    const parsedNumber = rawAmount > 0 ? Math.floor(rawAmount).toLocaleString('pt-BR') : 'N/A';
-                    const squareEmoji = emoji.split(' ')[0]; 
-                    
-                    // Mostra as notas individuais de cada boss com uma casa decimal também pra ficar padrão
-                    bossListText += `${squareEmoji} **${rank.encounterName}**: Parse **${rank.percentile.toFixed(1)}%** | *(DPS/HPS: ${parsedNumber})*\n`;
-                });
-
-                // O PULO DO GATO: Cálculo com uma casa decimal idêntico ao site (.toFixed(1))
-                const avgPercentile = totalPercentile / count;
-                const bestPerfAvgFormatted = avgPercentile.toFixed(1); 
-                
-                const avgDpsHps = totalDpsHps / count;
-                const emojiGeral = getParseEmoji(avgPercentile);
+                console.log(charData.classID)
+                // const nomeClasse = MAPA_CLASSES[charData.classID] || "Desconhecida";
 
                 const embedSummary = new EmbedBuilder()
-                    .setColor('#eab308') 
-                    .setTitle(`📊 BALANÇO DE PERFORMANCE: Season Atual`)
-                    .setDescription(`Dados consolidados de todos os chefes enfrentados por **${charName} - ${serverName}**:\n\n${bossListText}`)
-                    .addFields(
-                        { name: '🛡️ Classe / Spec', value: `**${rankings[0].spec}** (${rankings[0].class})`, inline: true },
-                        { name: '⭐ Best Perf. Avg', value: `**${bestPerfAvgFormatted}%** ${emojiGeral}`, inline: true },
-                        { name: '⚡ Média DPS / HPS', value: `**${Math.floor(avgDpsHps).toLocaleString('pt-BR')}**`, inline: true },
-                        { name: '🏰 Progressão Detectada', value: `**${count}** Bosses com registro`, inline: true }
-                    )
+                    .setColor('#eab308')
+                    .setTitle(`📊 RAIO-X DE PERFORMANCE DE GUILDA (HEROICO V2)`)
+                    .setDescription(`👤 **Jogador:** **${charName} - ${serverSlug.toUpperCase()}**\n\nExibindo comparativos reais baseados em Spec Percentile:`) // Removi a linha da Classe
                     .setTimestamp()
-                    .setFooter({ text: 'Métricas sincronizadas com o Warcraft Logs' });
+                    .setFooter({ text: 'Alimentado via Warcraft Logs GraphQL API v2' });
+
+                let possuiAlgumDado = false;
+
+                // 3. Mapeamento linkando as variáveis novas da Query para exibir no Discord
+                const mapeamentoRaides = [
+                    { label: "Sporefall", all: charData.r50_all, cur: charData.r50_cur },
+                    { label: "VS / DR / MQD", all: charData.r46_all, cur: charData.r46_cur }
+                ];
+
+                mapeamentoRaides.forEach((raid) => {
+                    const rankingsAll = raid.all?.rankings || [];
+                    const rankingsCur = raid.cur?.rankings || [];
+
+                    if (rankingsAll.length === 0 && rankingsCur.length === 0) return;
+                    possuiAlgumDado = true;
+
+                    const avgAll = raid.all?.bestPerformanceAverage ? raid.all.bestPerformanceAverage.toFixed(1) : "0.0";
+                    let listaBossesAll = "";
+                    
+                    rankingsAll.forEach(r => {
+                        const nota = r.rankPercent || r.historicalPercent || 0;
+                        const emoji = getParseEmoji(nota);
+                        const square = emoji.split(' ')[0];
+                        const nomeBoss = r.encounter?.name || "Boss Oculto";
+                        listaBossesAll += `${square} *${nomeBoss}:* **${nota.toFixed(1)}%**\n`;
+                    });
+
+                    const avgCur = raid.cur?.bestPerformanceAverage ? raid.cur.bestPerformanceAverage.toFixed(1) : "0.0";
+                    const totalKillsCur = rankingsCur.length;
+
+                    embedSummary.addFields({
+                        name: `🏰 ${raid.label}`,
+                        value: `🌐 **Histórico Global (Aba ALL):**\n⭐ *Best Perf. Avg:* \`${avgAll}%\` ${getParseEmoji(avgAll)}\n💀 *Bosses Derrotados:* \`${rankingsAll.length}\`\n\n` +
+                               `✨ **No Patch Atual:**\n⭐ *Best Perf. Avg:* \`${avgCur}%\` ${getParseEmoji(avgCur)}\n💀 *Kills Registrados:* \`${totalKillsCur}\`\n\n` +
+                               `📋 **Progresso Detalhado (Melhores Notas Históricas da Spec):**\n${listaBossesAll || '*Sem bosses detalhados*'}\n━`.trim(),
+                        inline: false
+                    });
+                });
+
+                if (!possuiAlgumDado) {
+                    return await interaction.editReply({ content: '❌ Este personagem possui a ficha limpa (sem nenhum log gravado no Heroico).' });
+                }
 
                 return await interaction.editReply({ embeds: [embedSummary], components: [] });
 
-            } catch (error) {
-                console.error(error);
-                return await interaction.editReply({ content: '❌ Erro ao processar o balanço da season.' });
+            } catch (err) {
+                console.error(err);
+                return await interaction.editReply({ content: '❌ Falha de conexão. Verifique o console do bot.' });
             }
         }
 
-        // Lógica normal para listar os bosses de uma Raid específica
+        // -------------------------------------------------------------
+        // CARREGAMENTO DE BOSS INDIVIDUAL
+        // -------------------------------------------------------------
         try {
-            const url = `https://www.warcraftlogs.com:443/v1/rankings/character/${encodeURIComponent(charName)}/${encodeURIComponent(serverName)}/US?zone=${zoneId}&api_key=${WCL_API_KEY}`;
-            const response = await axios.get(url);
-            const rankings = response.data;
+            const querySingleZone = `
+            query ($name: String!, $slug: String!, $region: String!, $zoneID: Int!) {
+              characterData {
+                character(name: $name, serverSlug: $slug, serverRegion: $region) {
+                  zoneRankings(zoneID: $zoneID, difficulty: 4, partition: 0)
+                }
+              }
+            }`;
 
-            if (!rankings || rankings.length === 0) {
+            const resposta = await requisicaoGraphQL(querySingleZone, { name: charName, slug: serverSlug, region: 'US', zoneID: Number(zoneId) });
+            const rankings = resposta?.data?.characterData?.character?.zoneRankings?.rankings || [];
+
+            if (rankings.length === 0) {
                 return await interaction.editReply({ 
-                    embeds: [new EmbedBuilder().setColor('#ef4444').setTitle('❌ Sem registros').setDescription(`Esse personagem não possui nenhuma luta registrada nessa raide específica.`)]
+                    embeds: [new EmbedBuilder().setColor('#ef4444').setTitle('❌ Sem registros').setDescription(`Esse personagem não possui logs Heroicos cadastrados nessa raide.`)]
                 });
             }
 
             const selectBoss = new StringSelectMenuBuilder()
-                .setCustomId(`selecionar_boss_${charName}_${serverName}_${zoneId}`)
-                .setPlaceholder('Escolha o Boss para ver a análise cirúrgica...');
+                .setCustomId(`selecionar_boss_${charName}_${serverSlug}_${zoneId}`)
+                .setPlaceholder('Escolha o Boss Heroico para ver a análise detalhada...');
 
-            const bossesAdicionados = new Set();
-            rankings.forEach((rank) => {
-                if (!bossesAdicionados.has(rank.encounterName) && bossesAdicionados.size < 25) {
-                    bossesAdicionados.add(rank.encounterName);
-                    selectBoss.addOptions({
-                        label: rank.encounterName,
-                        description: `Ver a melhor performance nesse boss`,
-                        value: String(rank.encounterID)
-                    });
-                }
+            rankings.forEach((r) => {
+                const nota = r.rankPercent || r.historicalPercent || 0;
+                selectBoss.addOptions({
+                    label: r.encounter?.name || "Boss Oculto",
+                    description: `Maior Spec Parse obtido: ${nota.toFixed(1)}%`,
+                    value: String(r.encounter?.id)
+                });
             });
 
             const targetRaidLabel = LISTA_DE_RAIDES.find(r => r.value === zoneId)?.label || "Raide Selecionada";
-
             const embedBoss = new EmbedBuilder()
                 .setColor('#a855f7')
-                .setTitle(`⚔️ Raide: ${targetRaidLabel}`)
-                .setDescription(`Selecione um dos chefes abaixo para detalhar o desempenho de **${charName}**.`);
+                .setTitle(`⚔️ Raide: ${targetRaidLabel} (Heroico)`)
+                .setDescription(`Selecione um chefe para auditar os recordes históricos de **${charName}**.`);
 
             const row = new ActionRowBuilder().addComponents(selectBoss);
             await interaction.editReply({ embeds: [embedBoss], components: [row] });
 
         } catch (error) {
             console.error(error);
-            await interaction.editReply({ content: '❌ Erro ao buscar os chefes dessa raide.' });
+            await interaction.editReply({ content: '❌ Erro ao listar chefes via GraphQL.' });
         }
     }
 
+    // -------------------------------------------------------------
+    // EXIBIÇÃO FINAL DO BOSS SELECIONADO
+    // -------------------------------------------------------------
     if (interaction.isStringSelectMenu() && interaction.customId.startsWith('selecionar_boss_')) {
         await interaction.deferUpdate();
 
-        const [,, charName, serverName, zoneId] = interaction.customId.split('_');
+        const [,, charName, serverSlug, zoneId] = interaction.customId.split('_');
         const encounterIDSelected = Number(interaction.values[0]);
 
         try {
-            const url = `https://www.warcraftlogs.com:443/v1/rankings/character/${encodeURIComponent(charName)}/${encodeURIComponent(serverName)}/US?zone=${zoneId}&api_key=${WCL_API_KEY}`;
-            const response = await axios.get(url);
-            const rankings = response.data;
+            const querySingleZone = `
+            query ($name: String!, $slug: String!, $region: String!, $zoneID: Int!) {
+              characterData {
+                character(name: $name, serverSlug: $slug, serverRegion: $region) {
+                  zoneRankings(zoneID: $zoneID, difficulty: 4, partition: 0)
+                }
+              }
+            }`;
 
-            const bossData = rankings.find(rank => rank.encounterID === encounterIDSelected);
+            const resposta = await requisicaoGraphQL(querySingleZone, { name: charName, slug: serverSlug, region: 'US', zoneID: Number(zoneId) });
+            const rankings = resposta?.data?.characterData?.character?.zoneRankings?.rankings || [];
+            const bossData = rankings.find(r => r.encounter?.id === encounterIDSelected);
 
             if (!bossData) {
-                return await interaction.editReply({ content: '❌ Dados do boss não localizados.' });
+                return await interaction.editReply({ content: '❌ Não foi possível extrair os dados desse boss.' });
             }
 
-            const emoji = getParseEmoji(bossData.percentile);
-            const rawAmount = bossData.amount || bossData.total || 0;
+            const percent = bossData.rankPercent || bossData.historicalPercent || 0;
+            const emoji = getParseEmoji(percent);
+            const rawAmount = bossData.bestAmount || 0;
             const dpsHpsFormatted = rawAmount > 0 ? Math.floor(rawAmount).toLocaleString('pt-BR') : 'N/A';
 
             const embedFinal = new EmbedBuilder()
                 .setColor('#22c55e')
-                .setTitle(`🎯 Análise Final: ${bossData.encounterName}`)
-                .setDescription(`Análise de raide extraída com precisão cirúrgica.`)
+                .setTitle(`🎯 Registro Histórico: ${bossData.encounter?.name}`)
+                .setDescription(`Melhor performance absoluta computada contra a sua própria Spec na season.`)
                 .addFields(
-                    { name: '👤 Player', value: `${charName}-${serverName}`, inline: true },
-                    { name: '🛡️ Spec', value: `**${bossData.spec}** (${bossData.class})`, inline: true },
-                    { name: '📊 Parse Geral', value: `**${bossData.percentile.toFixed(1)}%** ${emoji}`, inline: true },
-                    { name: '⚡ DPS / HPS', value: `**${dpsHpsFormatted}**`, inline: true },
-                    { name: '🌍 Posição Rank', value: `#${bossData.rank}`, inline: true },
-                    { name: '👥 Tamanho Raide', value: `${bossData.size} players`, inline: true }
+                    { name: '👤 Jogador', value: `${charName}-${serverSlug.toUpperCase()}`, inline: true },
+                    { name: '📊 Maior Spec Parse', value: `**${percent.toFixed(1)}%** ${emoji}`, inline: true },
+                    { name: '⚡ Recorde DPS / HPS', value: `**${dpsHpsFormatted}**`, inline: true },
+                    { name: '🌍 Colocação Global', value: `#${bossData.rank || 'N/A'}`, inline: true },
+                    { name: '💀 Kills Totais', value: `${bossData.totalKills || 0} eliminação(ões)`, inline: true }
                 )
                 .setTimestamp()
-                .setFooter({ text: 'Filtro por Raide & Boss Ativo' });
+                .setFooter({ text: 'Dados puros validados via API v2 GraphQL' });
 
             await interaction.editReply({ embeds: [embedFinal] });
 
